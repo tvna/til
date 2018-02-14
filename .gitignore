@@ -1,0 +1,6 @@
+# Trash
+.DS_Store
+
+＃contains private-param
+.htpasswd
+docker-compose.override.yml

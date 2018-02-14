@@ -1,0 +1,11 @@
+version: '3'
+services:
+
+  snmp-exporter:
+    build: ./exporter/snmp/
+    image: networkmgmt/snmp-exporter
+    volumes:
+      - ./conf/snmp.yml:/etc/snmp_exporter/config.yml:ro
+    expose:
+      - 9116
+    restart: always

@@ -1,0 +1,16 @@
+# grafana networks
+version: '3'
+services:
+
+  adminer:
+    image: adminer
+    expose:
+      - 8080
+    networks:
+      - default
+      - nginx
+    environment:
+      VIRTUAL_HOST: adminer.grafana.examle.com
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: adminer.grafana.examle.com
+      LETSENCRYPT_EMAIL: admin@examle.com

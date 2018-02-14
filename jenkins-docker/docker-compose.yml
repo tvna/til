@@ -1,0 +1,11 @@
+version: '2'
+services:
+    jenkins:
+        image: jenkins:2.60.2-alpine
+        ports:
+          - "50000:50000"
+        expose:
+          - "8080"
+        volumes:
+          - /var/jenkins_home:/var/jenkins_home
+        restart: always

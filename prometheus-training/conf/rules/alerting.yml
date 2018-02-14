@@ -1,0 +1,15 @@
+
+groups:
+- name: healthcheck
+  rules:
+
+  # Alert for any instance that is unreachable for >1 minutes.
+  - alert: InstanceDown
+    expr: probe_success == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary_ok: "Instance {{ $labels.instance }} up"
+      summary_ng: "Instance {{ $labels.instance }} down"
+      title: "Instance Monitoring Alert"

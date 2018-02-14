@@ -1,0 +1,42 @@
+# OpenLDAP networks
+version: '3'
+services:
+
+  openldap:
+    image: osixia/openldap:1.1.11
+    expose:
+      - 389
+    networks:
+      - default
+      - ldap
+    environment:
+      LDAP_ORGANISATION: "example"
+      LDAP_DOMAIN: "example.com"
+      LDAP_ADMIN_PASSWORD: "password"
+      TZ: 'Asia/Tokyo'
+    restart: always
+
+  admin:
+    image: osixia/phpldapadmin:0.7.0
+    links:
+      - openldap:ldap
+    expose:
+      - 80
+    networks:
+      - default
+      - nginx
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: 'ldap'
+      PHPLDAPADMIN_HTTPS: 'false'
+      VIRTUAL_HOST: openldap.mgmt.nol0nger.cf
+
+networks:
+  default:
+# before compose, "docker network create ldap_shared"
+  ldap:
+    external:
+      name: 'ldap_shared'
+# before compose, "docker network create nginx_shared"
+  nginx:
+    external:
+      name: 'nginx_shared'

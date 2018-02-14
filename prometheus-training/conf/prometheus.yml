@@ -1,0 +1,51 @@
+rule_files:
+  - 'rules/*.yml'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'blackbox_icmp'
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    file_sd_configs:
+      - files:
+          - 'targets/*.yml'
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          group: 'docker-host'
+
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          group: 'docker-container'
+
+  - job_name: 'fluentd'
+    metrics_path: /metrics
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['fluentd:24231']
+
+remote_write:
+  - url: http://prometheus-influxdb-storage:8086/api/v1/prom/write?db=prometheus
+
+remote_read:
+  - url: http://prometheus-influxdb-storage:8086/api/v1/prom/read?db=prometheus

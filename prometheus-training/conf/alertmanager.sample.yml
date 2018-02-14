@@ -1,0 +1,12 @@
+route:
+  receiver: mymail
+
+receivers:
+  - name: mymail
+    email_configs:
+    - to: "recv@example.local"
+      from: "send@example.local"
+      smarthost: smtp.example.local:587
+      auth_username: "send@example.local"
+      auth_identity: "send@example.local"
+      auth_password: "password"

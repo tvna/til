@@ -1,0 +1,125 @@
+# prometheus
+version: '3'
+services:
+
+# prometheus exporter components
+  node-exporter:
+    build: ./exporter/node/
+    image: localhost:5000/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    expose:
+      - 9100
+    privileged: true
+    restart: always
+
+  blackbox-exporter:
+    build: ./exporter/blackbox
+    image: localhost:5000/blackbox-exporter
+    volumes:
+    - ./conf/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    expose:
+      - 9115
+    restart: always
+
+  cadvisor:
+    build: ./exporter/cadvisor
+    image: localhost:5000/cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    expose:
+      - 8080
+    restart: always
+
+# prometheus test tools
+  promtool:
+    build: ./prometheus/promtool/
+    image: localhost:5000/promtool
+    volumes:
+      - ./conf/prometheus.yml:/etc/prometheus/config.yml:ro
+      - ./conf/targets:/etc/prometheus/targets:ro
+      - ./conf/rules:/etc/prometheus/rules:ro
+
+  amtool:
+    build: ./alertmanager/amtool/
+    image: localhost:5000/amtool
+    volumes:
+      - ./conf/alertmanager.yml:/etc/alertmanager/config.yml:ro
+
+# prometheus core components
+  prometheus:
+    build: ./prometheus/prometheus/
+    image: localhost:5000/prometheus
+    links:
+      - prometheus-influxdb-storage
+    expose:
+      - 9090
+    networks:
+      - default
+      - nginx
+      - grafana
+      - fluent
+    volumes:
+      - ./conf/prometheus.yml:/etc/prometheus/config.yml:ro
+      - ./conf/targets:/etc/prometheus/targets:ro
+      - ./conf/rules:/etc/prometheus/rules:ro
+    environment:
+      VIRTUAL_HOST: prometheus.example.com
+      VIRTUAL_PORT: 9090
+      LETSENCRYPT_HOST: prometheus.example.com
+      LETSENCRYPT_EMAIL: admin@example.com
+    restart: always
+
+  prometheus-influxdb-storage:
+    image: influxdb:alpine
+    expose:
+      - 8083 # web gui
+      - 8086 # common api
+    volumes:
+      - ~/docker/.database/prometheus-influxdb/:/var/lib/influxdb:rw
+    environment:
+      INFLUXDB_DB: 'prometheus'
+      INFLUXDB_ADMIN_ENABLED: 'true'
+      INFLUXDB_ADMIN_USER: 'prometheus_id'
+      INFLUXDB_ADMIN_PASSWORD: 'prometheus_pw'
+    restart: always
+
+  alertmanager:
+    build: ./alertmanager/alertmanager/
+    image: localhost:5000/alertmanager
+    links:
+      - prometheus
+    expose:
+      - 9093
+    networks:
+      - default
+      - nginx
+    volumes:
+      - ./conf/alertmanager.yml:/etc/alertmanager/config.yml:ro
+    environment:
+      VIRTUAL_HOST: alertmanager.example.com
+      VIRTUAL_PORT: 9093
+      LETSENCRYPT_HOST: alertmanager.example.com
+      LETSENCRYPT_EMAIL: admin@example.com
+    restart: always
+
+# before compose, "docker network create nginx_shared"
+# before compose, "docker network create fluent_shared"
+# before compose, "docker network create grafana_shared"
+networks:
+  default:
+  nginx:
+    external:
+      name: nginx_shared
+  fluent:
+    external:
+      name: fluent_shared
+  grafana:
+    external:
+      name: grafana_shared

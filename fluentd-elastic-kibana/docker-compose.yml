@@ -1,0 +1,32 @@
+# fluentd + elasticsearch + kibana
+version: '3'
+services:
+
+  fluentd:
+    build: ./fluentd
+    image: localhost:5000/fluentd:efk-training
+    links:
+      - elasticsearch
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./conf/fluent.conf:/fluentd/etc/fluent.conf:ro
+    restart: always
+
+  elasticsearch:
+    image: elasticsearch:alpine
+    expose:
+      - 9200
+
+  kibana:
+    image: kibana
+    links:
+      - elasticsearch
+    expose:
+      - 5601
+
+networks:
+  default:
+    external:
+      name: nginx_shared

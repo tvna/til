@@ -1,0 +1,26 @@
+# docker-registry
+version: '3'
+services:
+
+  backend:
+    image: registry:2
+    volumes:
+      - ~/docker/.dockerregistry:/var/lib/registry
+    ports:
+      - 5000:5000
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: always
+
+  frontend:
+    image: hyper/docker-registry-web
+    links:
+      - backend
+    expose:
+      - 8080
+    environment:
+      REGISTRY_URL: http://backend:5000/v2
+    restart: always
