@@ -1,15 +1,14 @@
-FROM alpine as timezone
-RUN apk --update add tzdata && \
-    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    apk del tzdata && rm -rf /var/cache/apk/*
+FROM google/cadvisor as buildstage
 
-FROM networkmgmt/dumb-init as initproc
-COPY --from=timezone /etc/localtime /etc/localtime
+RUN set -ex && \
+    apk update && \
+    apk add --no-cache tini && \
+    rm -rf $GOPATH/src/* /var/cache/apk/* /var/tmp/* /tmp/*
 
-FROM google/cadvisor
-COPY --from=initproc dumb-init /sbin/dumb-init
-COPY --from=initproc /etc/localtime /etc/localtime
+FROM busybox
+COPY --from=buildstage /usr/bin/tini /usr/bin/tini
+COPY --from=buildstage /usr/bin/cadvisor /usr/bin/cadvisor
 
 EXPOSE     8080
-ENTRYPOINT ["/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD        ["/usr/bin/cadvisor", "-logtostderr"]

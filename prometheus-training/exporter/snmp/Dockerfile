@@ -1,34 +1,35 @@
-FROM alpine as timezone
-RUN apk --update add tzdata && \
-    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    apk del tzdata && rm -rf /var/cache/apk/*
+FROM golang:1.10-alpine as buildstage
 
-FROM networkmgmt/dumb-init as initproc
-COPY --from=timezone /etc/localtime /etc/localtime
+ENV SNMP_EXPORTER_VERSION=v0.8.0
+ARG SNMP_EXPORTER_GIT=https://github.com/prometheus/snmp_exporter.git
 
-FROM golang:alpine as snmp-exporter
 RUN set -ex && \
-    apk update && apk add --no-cache git build-base
-ARG SNMP_EXPORTER_VERSION=v0.8.0
-RUN mkdir -p $GOPATH/src/github.com/prometheus && \
+    apk update && \
+    apk add --no-cache --virtual .build-deps \
+      git \
+      build-base \
+    && \
+    apk add --no-cache --virtual .run-deps \
+      dumb-init \
+    && \
+    mkdir -p $GOPATH/src/github.com/prometheus && \
     cd $GOPATH/src/github.com/prometheus && \
-    git clone --depth=1 -b $SNMP_EXPORTER_VERSION https://github.com/prometheus/snmp_exporter.git && \
+    git clone --depth=1 -b $SNMP_EXPORTER_VERSION $SNMP_EXPORTER_GIT && \
     cd snmp_exporter && \
     git checkout -b $SNMP_EXPORTER_VERSION && \
-    make build && \
+    make build -j4 && \
     mkdir -p /etc/snmp_exporter && \
     mv $GOPATH/src/github.com/prometheus/snmp_exporter/snmp_exporter /bin/snmp_exporter && \
     mv $GOPATH/src/github.com/prometheus/snmp_exporter/snmp.yml /etc/snmp_exporter/config.yml && \
-    rm -rf $GOPATH/src/* && \
-    rm -rf /var/cache/apk/*
+    apk del .build-deps && \
+    rm -rf $GOPATH/src/* /var/cache/apk/* /var/tmp/* /tmp/*
 
 FROM busybox
-COPY --from=initproc dumb-init /sbin/dumb-init
-COPY --from=initproc /etc/localtime /etc/localtime
-COPY --from=snmp-exporter /bin/snmp_exporter /bin/snmp_exporter
-COPY --from=snmp-exporter /etc/snmp_exporter/config.yml /etc/snmp_exporter/config.yml
+COPY --from=buildstage /usr/bin/dumb-init /usr/bin/dumb-init
+COPY --from=buildstage /bin/snmp_exporter /bin/snmp_exporter
+COPY --from=buildstage /etc/snmp_exporter/config.yml /etc/snmp_exporter/config.yml
 
 EXPOSE     9116
-ENTRYPOINT ["/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD        ["/bin/snmp_exporter" \
             "--config.file=/etc/snmp_exporter/config.yml"]

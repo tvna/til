@@ -1,40 +1,39 @@
-FROM alpine as timezone
-RUN apk --update add tzdata && \
-    cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    apk del tzdata && rm -rf /var/cache/apk/*
+FROM golang:1.10-alpine as buildstage
 
-FROM networkmgmt/dumb-init as initproc
-COPY --from=timezone /etc/localtime /etc/localtime
+ENV PROMETHEUS_ALERTMANAGER_VERSION=v0.13.0
+ARG PROMETHEUS_ALERTMANAGER_GIT=https://github.com/prometheus/alertmanager.git
 
-FROM golang:alpine as alertmanager
 RUN set -ex && \
-    apk update && apk add --no-cache git build-base
-ARG ALERTMANAGER_VERSION=v0.13.0
-RUN mkdir -p $GOPATH/src/github.com/prometheus && \
+    apk update && \
+    apk add --no-cache --virtual .build-deps \
+      git \
+      build-base \
+    && \
+    apk add --no-cache --virtual .run-deps \
+      dumb-init \
+    && \
+    mkdir -p $GOPATH/src/github.com/prometheus && \
     cd $GOPATH/src/github.com/prometheus && \
-    git clone --depth=1 -b $ALERTMANAGER_VERSION https://github.com/prometheus/alertmanager.git && \
+    git clone --depth=1 -b $PROMETHEUS_ALERTMANAGER_VERSION $PROMETHEUS_ALERTMANAGER_GIT && \
     cd alertmanager && \
-    git checkout -b $ALERTMANAGER_VERSION && \
-## make build for rasberry pi ##
-#   export GOARCH=arm && \
-#   sed -i "85d" Makefile && \
-    make build && \
+    git checkout -b $PROMETHEUS_ALERTMANAGER_VERSION && \
+    make build -j4 && \
     mkdir -p /etc/alertmanager && \
     mv $GOPATH/src/github.com/prometheus/alertmanager/alertmanager /bin/alertmanager && \
     mv $GOPATH/src/github.com/prometheus/alertmanager/amtool /bin/amtool && \
     mv $GOPATH/src/github.com/prometheus/alertmanager/doc/examples/simple.yml \
         /etc/alertmanager/config.yml && \
-    rm -rf $GOPATH/src/* && \
-    rm -rf /var/cache/apk/*
+    apk del .build-deps && \
+    rm -rf $GOPATH/src/* /var/cache/apk/* /var/tmp/* /tmp/*
 
 FROM busybox
-COPY --from=initproc dumb-init /sbin/dumb-init
-COPY --from=initproc /etc/localtime /etc/localtime
-COPY --from=alertmanager /bin/alertmanager /bin/alertmanager
+COPY --from=buildstage /usr/bin/dumb-init /usr/bin/dumb-init
+COPY --from=buildstage /bin/alertmanager /bin/alertmanager
+COPY --from=buildstage /etc/alertmanager/config.yml /etc/alertmanager/config.yml
 
 VOLUME     ["/alertmanager"]
 EXPOSE     9093
-ENTRYPOINT ["/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD        ["/bin/alertmanager", \
             "--config.file=/etc/alertmanager/config.yml", \
             "--storage.path=/alertmanager" ]

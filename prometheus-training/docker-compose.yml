@@ -13,6 +13,8 @@ services:
     expose:
       - 9100
     privileged: true
+    logging:
+      driver: "none"
     restart: always
 
   blackbox-exporter:
@@ -35,6 +37,8 @@ services:
       - /dev/disk/:/dev/disk:ro
     expose:
       - 8080
+    logging:
+      driver: "none"
     restart: always
 
 # prometheus test tools
@@ -64,7 +68,7 @@ services:
       - default
       - nginx
       - grafana
-      - fluent
+      - prometheus
     volumes:
       - ./conf/prometheus.yml:/etc/prometheus/config.yml:ro
       - ./conf/targets:/etc/prometheus/targets:ro
@@ -79,15 +83,13 @@ services:
   prometheus-influxdb-storage:
     image: influxdb:alpine
     expose:
-      - 8083 # web gui
       - 8086 # common api
     volumes:
-      - ~/docker/.database/prometheus-influxdb/:/var/lib/influxdb:rw
+      - ~/.database/prometheus-influxdb/:/var/lib/influxdb:rw
     environment:
       INFLUXDB_DB: 'prometheus'
-      INFLUXDB_ADMIN_ENABLED: 'true'
-      INFLUXDB_ADMIN_USER: 'prometheus_id'
-      INFLUXDB_ADMIN_PASSWORD: 'prometheus_pw'
+    logging:
+      driver: "none"
     restart: always
 
   alertmanager:
@@ -109,17 +111,17 @@ services:
       LETSENCRYPT_EMAIL: admin@example.com
     restart: always
 
-# before compose, "docker network create nginx_shared"
-# before compose, "docker network create fluent_shared"
-# before compose, "docker network create grafana_shared"
+# before compose up, "docker network create nginx_shared"
+# before compose up, "docker network create prom_shared"
+# before compose up, "docker network create grafana_shared"
 networks:
   default:
   nginx:
     external:
       name: nginx_shared
-  fluent:
+  prometheus:
     external:
-      name: fluent_shared
+      name: prom_shared
   grafana:
     external:
       name: grafana_shared
