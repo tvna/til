@@ -1,0 +1,52 @@
+# Apache Guacamole Stack
+# how to install => https://guacamole.apache.org/doc/gug/guacamole-docker.html
+version: '3'
+services:
+
+  guacd:
+    image: guacamole/guacd
+    expose:
+      - 4822
+    restart: always
+
+  guacamole:
+    image: guacamole/guacamole
+    links:
+      - guacd
+      - postgres
+    ports:
+      - 8080:8080
+    networks:
+      - default
+      - nginx
+    environment:
+      GUACD_HOSTNAME: "guacd"
+      POSTGRES_HOSTNAME: "postgres"
+      POSTGRES_DATABASE: "guacamole"
+      POSTGRES_USER: "guacamole_id"
+      POSTGRES_PASSWORD: "guacamole_pw"
+      VIRTUAL_HOST: "guacamole.example.com"
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: "guacamole.example.com"
+      LETSENCRYPT_EMAIL: "admin@example.com"
+    restart: always
+
+  postgres:
+    image: postgres:10-alpine
+    expose:
+      - 5432
+    volumes:
+      - ~/.database/guacamole:/var/lib/mysql
+      - ./initdb-postgres.sql:/docker-entrypoint-initdb.d/initdb.sql
+    environment:
+      POSTGRES_DB: "guacamole"
+      POSTGRES_USER: "guacamole_id"
+      POSTGRES_PASSWORD: "guacamole_pw"
+    restart: always
+
+# before compose up, "docker network create nginx_shared"
+networks:
+  default:
+  nginx:
+    external:
+      name: nginx_shared

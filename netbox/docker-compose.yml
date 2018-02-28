@@ -1,0 +1,85 @@
+version: '3'
+services:
+
+  netbox:
+    image: ninech/netbox
+    links:
+      - netbox-postgres
+    expose:
+      - 8001
+    volumes:
+      - netbox-nginx-config:/etc/netbox-nginx/
+      - netbox-static-files:/opt/netbox/netbox/static
+      - netbox-media-files:/opt/netbox/netbox/media
+      - netbox-report-files:/opt/netbox/netbox/reports
+    environment:
+      ALLOWED_HOSTS: "localhost netbox.example.com" # for overriding param
+      DB_HOST: "netbox-postgres"
+      DB_NAME: "netbox"
+      DB_USER: "netbox"
+      DB_PASSWORD: "J5brHrAXFLQSif0K"
+      EMAIL_SERVER: localhost # for overriding param
+      EMAIL_PORT: 25
+      EMAIL_USERNAME: "netbox" # for overriding param
+      EMAIL_PASSWORD: "" # for overriding param
+      EMAIL_TIMEOUT: 5
+      EMAIL_FROM: "netbox@bar.com" # for overriding param
+      NAPALM_TIMEOUT: 5
+      MAX_PAGE_SIZE: 0
+      SECRET_KEY: "r8OwDznj!!dci#P9ghmRfdu1Ysxm0AiPeDCQhKE+N_rClfWNj" # for overriding param
+      SUPERUSER_NAME: "admin" # for overriding param
+      SUPERUSER_EMAIL: "admin@example.com" # for overriding param
+      SUPERUSER_PASSWORD: "admin" # for overriding param
+      SUPERUSER_API_TOKEN: "0123456789abcdef0123456789abcdef01234567" # for overriding param
+    restart: always
+
+  netbox-nginx:
+    image: nginx:1.13-alpine
+    links:
+      - netbox
+    ports:
+      - 8888:8080
+    networks:
+      - default
+      - nginx
+    volumes:
+      - netbox-static-files:/opt/netbox/netbox/static:ro
+      - netbox-nginx-config:/etc/netbox-nginx/:ro
+    environment:
+      VIRTUAL_HOST: "netbox.example.com" # for overriding param
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: "netbox.example.com" # for overriding param
+      LETSENCRYPT_EMAIL: "admin@example.com" # for overriding param
+    command: nginx -g 'daemon off;' -c /etc/netbox-nginx/nginx.conf
+    logging:
+      driver: "none"
+    restart: always
+
+  netbox-postgres:
+    image: postgres:10.2-alpine
+    environment:
+      POSTGRES_DB: "netbox"
+      POSTGRES_USER: "netbox"
+      POSTGRES_PASSWORD: "J5brHrAXFLQSif0K"
+    volumes:
+      - ~/.database/netbox/:/var/lib/postgresql/data
+    logging:
+      driver: "none"
+    restart: always
+
+# before compose up, "docker network create nginx_shared"
+networks:
+  default:
+  nginx:
+    external:
+      name: nginx_shared
+
+volumes:
+  netbox-static-files:
+    driver: local
+  netbox-nginx-config:
+    driver: local
+  netbox-media-files:
+    driver: local
+  netbox-report-files:
+    driver: local

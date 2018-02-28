@@ -1,5 +1,5 @@
 # grafana networks
-version: '3'
+version: "3"
 services:
 
   database:
@@ -9,10 +9,9 @@ services:
     volumes:
       - ~/docker/.database/grafana/:/var/lib/postgresql/data/
     environment:
-      POSTGRES_DB: grafana
-      POSTGRES_USER: grafana_id
-      POSTGRES_PASSWORD: grafana_pw
-      TZ: 'Asia/Tokyo'
+      POSTGRES_DB: "grafana"
+      POSTGRES_USER: "grafana_id"
+      POSTGRES_PASSWORD: "grafana_pw"
     restart: always
 
   grafana:
@@ -27,20 +26,19 @@ services:
       - nginx
       - ldap
     environment:
-      GF_DATABASE_TYPE: 'postgres'
-      GF_DATABASE_HOST: 'database:5432'
-      GF_DATABASE_USER: 'grafana_id'
-      GF_DATABASE_PASSWORD: 'grafana_pw'
+      GF_DATABASE_TYPE: "postgres"
+      GF_DATABASE_HOST: "database:5432"
+      GF_DATABASE_USER: "grafana_id"
+      GF_DATABASE_PASSWORD: "grafana_pw"
       GF_SECURITY_ADMIN_USER: grafana
       GF_SECURITY_ADMIN_PASSWORD: grafana
-      GF_USERS_ALLOW_SIGN_UP: 'false'
-      GF_USERS_ALLOW_ORG_CREATE: 'false'
-      GF_ALERTING_ENABLED: 'false'
-      TZ: 'Asia/Tokyo'
-      VIRTUAL_HOST: grafana.examle.com
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_ALLOW_ORG_CREATE: "false"
+      GF_ALERTING_ENABLED: "false"
+      VIRTUAL_HOST: "grafana.examle.com"
       VIRTUAL_PORT: 3000
-      LETSENCRYPT_HOST: grafana.examle.com
-      LETSENCRYPT_EMAIL: admin@examle.com
+      LETSENCRYPT_HOST: "grafana.examle.com"
+      LETSENCRYPT_EMAIL: "admin@examle.com"
     restart: always
 
 # before compose, "docker network create grafana_shared"

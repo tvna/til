@@ -1,20 +1,59 @@
-# fluentd global
+# fluentd + mongodb remote storage
 version: '3'
 services:
 
   fluentd:
     build: ./fluentd
     image: localhost:5000/fluentd:prometheus
+    links:
+      - fluent-mongo-storage
     expose:
       - 24231 # prometheus api
     ports:
       - 24224:24224
       - 24224:24224/udp
+    networks:
+      - default
+      - prometheus
     volumes:
-      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf:ro
+      - ./conf/:/fluentd/etc/:ro
+    environment:
+      TZ: 'Asia/Tokyo'
     restart: always
 
+  fluent-mongo-storage:
+    image: mongo:3.7.1-jessie
+    expose:
+      - 27017
+    volumes:
+      - ~/.database/fluent-mongo/:/data/db:rw
+    environment:
+      MONGO_INITDB_DATABASE: 'fluent'
+      TZ: 'Asia/Tokyo'
+    command: ['mongod','--smallfiles']
+    restart: always
+
+  fluent-mongo-express:
+    image: mongo-express
+    links:
+      - fluent-mongo-storage
+    expose:
+      - 8081
+    networks:
+      - default
+      - nginx
+    environment:
+      ME_CONFIG_MONGODB_SERVER: 'fluent-mongo-storage'
+      TZ: 'Asia/Tokyo'
+    restart: always
+
+# before compose, "docker network create nginx_shared"
+# before compose, "docker network create prom_shared"
 networks:
   default:
+  prometheus:
     external:
-      name: fluent_shared
+      name: prom_shared
+  nginx:
+    external:
+      name: nginx_shared

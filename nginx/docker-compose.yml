@@ -9,7 +9,7 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ./conf/htpasswd/:/etc/nginx/htpasswd:ro
+      - ~/docker/.htpasswd/:/etc/nginx/htpasswd:ro
       - conf_nginx:/etc/nginx/conf.d/:ro
       - conf_vhost:/etc/nginx/vhost.d/:ro
       - conf_certs:/etc/nginx/certs:ro
@@ -20,7 +20,7 @@ services:
       driver: fluentd
       options:
         fluentd-address: localhost:24224
-        tag: docker.nginx-proxy.{{.ID}}.access
+        tag: docker.nginx-proxy.{{.ID}}
     restart: always
 
   nginx-generate:
@@ -32,6 +32,7 @@ services:
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - ~/docker/.htpasswd/:/etc/nginx/htpasswd:ro
       - ./nginx.tmpl:/etc/docker-gen/nginx.tmpl:ro
+      - conf_vhost:/etc/nginx/vhost.d/:rw
       - conf_nginx:/etc/nginx/conf.d/:rw
       - conf_certs:/etc/nginx/certs/:ro
     labels: # separete-container
@@ -52,6 +53,16 @@ services:
     environment:
       NGINX_PROXY_CONTAINER: nginx-proxy
       NGINX_DOCKER_GEN_CONTAINER: nginx-generate
+    restart: always
+
+  httpd-dummy:
+    image: httpd:alpine
+    expose:
+      - 80
+    environment:
+      VIRTUAL_HOST: example.com
+    logging:
+      driver: "none"
     restart: always
 
 # before compose, "docker network create nginx_shared"
