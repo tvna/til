@@ -1,0 +1,33 @@
+{
+  "main": "./build/electron/main.js",
+  "dependencies": {
+    "@stlite/desktop": "^0.60.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.1.0",
+    "rimraf": "^5.0.7"
+  },
+  "build": {
+      "files": [
+          "build/**/*"
+      ]
+  },
+  "scripts": {
+    "dump": "dump-stlite-desktop-artifacts",
+    "serve": "cross-env NODE_ENV=production electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps",
+    "commit": "pre-commit run && npx cz"
+  },
+  "stlite": {
+    "desktop": {
+      "files": [
+        "app.py"
+      ],
+      "nodeJsWorker": false,
+      "entrypoint": "app.py",
+      "embed": true,
+      "dependencies": []
+    }
+  }
+}
