@@ -1,0 +1,14 @@
+version: 2
+ethernets:
+  ${nic_name}:
+    dhcp4: false
+    addresses:
+      - ${vm_ip_cidr}
+    routes:
+      - to: default
+        via: ${gateway}
+    nameservers:
+      addresses:
+%{ for s in dns_servers ~}
+        - ${s}
+%{ endfor ~}

@@ -1,0 +1,61 @@
+---
+# Coolify の RootUserSeeder は検証に失敗すると黙ってスキップし、
+# 登録画面が開いたままになるため、事前に同等の条件をチェックする
+- name: 初期管理者の設定値を検証する
+  ansible.builtin.assert:
+    that:
+      - coolify_root_username is match('^[\w\s-]{3,255}$')
+      - coolify_root_user_email is match('^[^@\s]+@[^@\s]+\.[^@\s]+$')
+      - coolify_root_user_password | length >= 8
+      - coolify_root_user_password is search('[a-z]')
+      - coolify_root_user_password is search('[A-Z]')
+      - coolify_root_user_password is search('[0-9]')
+      - coolify_root_user_password is search('[^A-Za-z0-9]')
+    fail_msg: >-
+      COOLIFY_ROOT_USER_EMAIL / COOLIFY_ROOT_USER_PASSWORD を設定してください。
+      パスワードは 8 文字以上で大文字・小文字・数字・記号を含む必要があります。
+    quiet: true
+  no_log: true
+
+- name: インストール済みか確認する
+  ansible.builtin.stat:
+    path: /data/coolify/source/.env
+  register: coolify_env
+
+- name: 公式インストーラを取得する
+  ansible.builtin.get_url:
+    url: "{{ coolify_install_script_url }}"
+    dest: /root/coolify-install.sh
+    owner: root
+    group: root
+    mode: "0700"
+  when: not coolify_env.stat.exists
+
+- name: Coolify をインストールする (数分かかる)
+  ansible.builtin.command:
+    cmd: "bash /root/coolify-install.sh {{ coolify_version }}"
+    creates: /data/coolify/source/.env
+  environment:
+    ROOT_USERNAME: "{{ coolify_root_username }}"
+    ROOT_USER_EMAIL: "{{ coolify_root_user_email }}"
+    ROOT_USER_PASSWORD: "{{ coolify_root_user_password }}"
+    AUTOUPDATE: "{{ coolify_autoupdate }}"
+    DOCKER_ADDRESS_POOL_BASE: "{{ coolify_docker_address_pool_base }}"
+    DOCKER_ADDRESS_POOL_SIZE: "{{ coolify_docker_address_pool_size }}"
+  async: 1800
+  poll: 15
+  no_log: true
+  when: not coolify_env.stat.exists
+
+- name: Coolify の起動を待つ
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8000/api/health
+    status_code: 200
+  register: coolify_health
+  until: coolify_health.status == 200
+  retries: 60
+  delay: 10
+
+- name: アクセス先を表示する
+  ansible.builtin.debug:
+    msg: "Coolify: http://{{ ansible_host }}:8000 (ユーザー: {{ coolify_root_user_email }})"

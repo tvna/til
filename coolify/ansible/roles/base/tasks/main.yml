@@ -1,0 +1,61 @@
+---
+- name: Cloud-init の完了を待つ
+  ansible.builtin.command: cloud-init status --wait
+  changed_when: false
+
+- name: パッケージを最新化する
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest # noqa package-latest
+    update_cache: true
+  when: base_dnf_upgrade | bool
+
+- name: 必要パッケージを導入する
+  ansible.builtin.dnf:
+    name:
+      - curl
+      - wget
+      - git
+      - jq
+      - openssl
+      - chrony
+      - firewalld
+      - dnf-plugins-core
+      - qemu-guest-agent
+    state: present
+
+- name: タイムゾーンを設定する
+  community.general.timezone:
+    name: "{{ base_timezone }}"
+
+- name: 常駐サービスを有効化する
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - chronyd
+    - firewalld
+    - qemu-guest-agent
+
+- name: SSH サーバーを Coolify 要件 (root は鍵認証のみ許可) に合わせる
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-coolify.conf
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      # Managed by Ansible
+      PubkeyAuthentication yes
+      PermitRootLogin prohibit-password
+      PasswordAuthentication no
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Restart sshd
+
+- name: ファイアウォール (firewalld) でポートを開放する
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ base_firewall_ports }}"

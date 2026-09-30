@@ -1,0 +1,25 @@
+---
+# --- base ---
+base_timezone: Asia/Tokyo
+base_dnf_upgrade: true
+# Coolify ダッシュボードに IP 直接アクセスするためのポート (公式 firewall ドキュメント準拠)
+base_firewall_ports:
+  - 22/tcp    # SSH
+  - 80/tcp    # HTTP (Coolify proxy)
+  - 443/tcp   # HTTPS (Coolify proxy)
+  - 8000/tcp  # ダッシュボード
+  - 6001/tcp  # リアルタイム通知
+  - 6002/tcp  # Web ターミナル
+
+# --- coolify ---
+# 空文字なら最新版。固定する場合は "4.0.0" 形式
+coolify_version: ""
+coolify_autoupdate: "true"
+# LAN と重なる場合は変更する (インストーラ既定: 10.0.0.0/8, size 24)
+coolify_docker_address_pool_base: "10.0.0.0/8"
+coolify_docker_address_pool_size: 24
+
+# 初期管理者。未設定のままだと最初に /register した人が管理者になるため必須にしている
+coolify_root_username: "{{ lookup('ansible.builtin.env', 'COOLIFY_ROOT_USERNAME') | default('admin', true) }}"
+coolify_root_user_email: "{{ lookup('ansible.builtin.env', 'COOLIFY_ROOT_USER_EMAIL') }}"
+coolify_root_user_password: "{{ lookup('ansible.builtin.env', 'COOLIFY_ROOT_USER_PASSWORD') }}"

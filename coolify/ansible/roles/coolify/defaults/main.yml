@@ -1,0 +1,9 @@
+---
+coolify_install_script_url: https://cdn.coollabs.io/coolify/install.sh
+coolify_version: ""
+coolify_autoupdate: "true"
+coolify_docker_address_pool_base: "10.0.0.0/8"
+coolify_docker_address_pool_size: 24
+coolify_root_username: admin
+coolify_root_user_email: ""
+coolify_root_user_password: ""
