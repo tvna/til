@@ -1,0 +1,26 @@
+# gitlab_fqdn はインベントリ（OpenTofu が生成）で定義される。
+
+# --- GitLab ---
+gitlab_external_url: "https://{{ gitlab_fqdn }}"
+# 空ならリポジトリの最新版。固定する場合は RPM の version-release を指定（例: "19.4.1-ee.0.el10"）
+gitlab_version: ""
+gitlab_time_zone: "Asia/Tokyo"
+
+# root の初期パスワード。未指定なら GitLab が生成し /etc/gitlab/initial_root_password に保存する（24 時間で自動削除）。
+# 指定する場合は group_vars/gitlab/vault.yml に ansible-vault で暗号化して置く（README 参照）。
+gitlab_root_password: "{{ vault_gitlab_root_password | default('') }}"
+
+# メモリ 8 GB 程度で動かす場合に true。GitLab 公式「memory-constrained environments」の設定の一部を適用する
+gitlab_memory_constrained: false
+
+# gitlab.rb の末尾にそのまま追記する設定（SMTP など）
+gitlab_extra_config: ""
+
+# --- TLS ---
+# selfsigned: VM 上でプライベート CA とサーバー証明書を生成する
+# provided  : 社内 CA 等で発行済みの証明書を macOS 側から配置する
+gitlab_tls_mode: selfsigned
+# provided の場合に指定（macOS 側のパス）
+# gitlab_tls_cert_src: "{{ playbook_dir }}/../artifacts/gitlab.crt"   # サーバー証明書 + 中間証明書
+# gitlab_tls_key_src: "{{ playbook_dir }}/../artifacts/gitlab.key"
+# gitlab_tls_ca_src: "{{ playbook_dir }}/../artifacts/ca.crt"         # ルート CA（任意）

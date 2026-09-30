@@ -1,0 +1,59 @@
+- name: Validate TLS mode
+  ansible.builtin.assert:
+    that:
+      - gitlab_tls_mode in ['selfsigned', 'provided']
+      - gitlab_tls_mode != 'provided' or (gitlab_tls_cert_src is defined and gitlab_tls_key_src is defined)
+    fail_msg: "gitlab_tls_mode=provided requires gitlab_tls_cert_src and gitlab_tls_key_src"
+
+- name: Create GitLab SSL directory
+  ansible.builtin.file:
+    path: "{{ gitlab_tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Generate private CA and server certificate
+  ansible.builtin.include_tasks: selfsigned.yml
+  when: gitlab_tls_mode == 'selfsigned'
+
+- name: Deploy provided certificate
+  ansible.builtin.include_tasks: provided.yml
+  when: gitlab_tls_mode == 'provided'
+
+- name: Trust CA certificate in OS and GitLab
+  when: gitlab_tls_ca_cert_path is defined
+  block:
+    - name: Create GitLab trusted-certs directory
+      ansible.builtin.file:
+        path: /etc/gitlab/trusted-certs
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install CA into GitLab trusted-certs
+      ansible.builtin.copy:
+        src: "{{ gitlab_tls_ca_cert_path }}"
+        dest: /etc/gitlab/trusted-certs/gitlab-private-ca.crt
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reconfigure GitLab
+
+    - name: Install CA into OS trust store
+      ansible.builtin.copy:
+        src: "{{ gitlab_tls_ca_cert_path }}"
+        dest: /etc/pki/ca-trust/source/anchors/gitlab-private-ca.crt
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Update OS trust store
+
+    - name: Fetch CA certificate to control node
+      ansible.builtin.fetch:
+        src: "{{ gitlab_tls_ca_cert_path }}"
+        dest: "{{ gitlab_tls_fetch_ca_to }}"
+        flat: true

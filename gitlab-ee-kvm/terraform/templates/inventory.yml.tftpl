@@ -1,0 +1,14 @@
+# このファイルは OpenTofu/Terraform が生成する。直接編集しないこと。
+# libvirt domain: ${domain_name}
+all:
+  children:
+    gitlab:
+      hosts:
+        ${fqdn}:
+          ansible_host: ${ip_address}
+          ansible_user: ${admin_user}
+%{ if proxy_jump != "" ~}
+          ansible_ssh_common_args: "-o ProxyJump=${proxy_jump}"
+%{ endif ~}
+      vars:
+        gitlab_fqdn: ${fqdn}

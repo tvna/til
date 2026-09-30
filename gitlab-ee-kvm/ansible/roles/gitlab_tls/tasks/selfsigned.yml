@@ -1,0 +1,91 @@
+# --- プライベート CA ---
+- name: Create CA directory
+  ansible.builtin.file:
+    path: "{{ gitlab_tls_ca_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Generate CA private key
+  community.crypto.openssl_privatekey:
+    path: "{{ gitlab_tls_ca_dir }}/ca.key"
+    type: RSA
+    size: 4096
+    mode: "0600"
+
+- name: Generate CA CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ gitlab_tls_ca_dir }}/ca.key"
+    common_name: "{{ gitlab_tls_ca_common_name }}"
+    use_common_name_for_san: false
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  register: gitlab_tls_ca_csr
+  changed_when: false
+
+- name: Self-sign CA certificate
+  community.crypto.x509_certificate:
+    path: "{{ gitlab_tls_ca_dir }}/ca.crt"
+    csr_content: "{{ gitlab_tls_ca_csr.csr }}"
+    privatekey_path: "{{ gitlab_tls_ca_dir }}/ca.key"
+    provider: selfsigned
+    selfsigned_digest: sha256
+    selfsigned_not_after: "+{{ gitlab_tls_ca_valid_days }}d"
+    mode: "0644"
+
+# --- サーバー証明書 ---
+- name: Generate server private key
+  community.crypto.openssl_privatekey:
+    path: "{{ gitlab_tls_key_path }}"
+    type: RSA
+    size: 3072
+    mode: "0600"
+  notify: Reconfigure GitLab
+
+- name: Generate server CSR
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: "{{ gitlab_tls_key_path }}"
+    common_name: "{{ gitlab_fqdn }}"
+    subject_alt_name: "{{ ['DNS:' ~ gitlab_fqdn] + gitlab_tls_extra_sans }}"
+    basic_constraints:
+      - "CA:FALSE"
+    key_usage:
+      - digitalSignature
+      - keyEncipherment
+    key_usage_critical: true
+    extended_key_usage:
+      - serverAuth
+  register: gitlab_tls_server_csr
+  changed_when: false
+
+- name: Check current server certificate
+  community.crypto.x509_certificate_info:
+    path: "{{ gitlab_tls_cert_path }}"
+    valid_at:
+      renew: "+30d"
+  register: gitlab_tls_server_cert_info
+  failed_when: false
+
+- name: Sign server certificate with private CA
+  community.crypto.x509_certificate:
+    path: "{{ gitlab_tls_cert_path }}"
+    csr_content: "{{ gitlab_tls_server_csr.csr }}"
+    provider: ownca
+    ownca_path: "{{ gitlab_tls_ca_dir }}/ca.crt"
+    ownca_privatekey_path: "{{ gitlab_tls_ca_dir }}/ca.key"
+    ownca_digest: sha256
+    ownca_not_after: "+{{ gitlab_tls_server_valid_days }}d"
+    # 残り 30 日未満なら再発行する
+    force: "{{ not (gitlab_tls_server_cert_info.valid_at.renew | default(false)) }}"
+    mode: "0644"
+  notify: Reconfigure GitLab
+
+- name: Set CA certificate path
+  ansible.builtin.set_fact:
+    gitlab_tls_ca_cert_path: "{{ gitlab_tls_ca_dir }}/ca.crt"

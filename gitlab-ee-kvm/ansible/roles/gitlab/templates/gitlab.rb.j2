@@ -1,0 +1,30 @@
+# {{ ansible_managed }}
+# 手動で編集しても次回の ansible-playbook 実行で上書きされる。
+# 追加設定は group_vars の gitlab_extra_config に書くこと。
+# 全設定項目: /opt/gitlab/etc/gitlab.rb.template
+
+external_url '{{ gitlab_external_url }}'
+
+## TLS（自前の証明書を使うため Let's Encrypt 連携は無効化）
+letsencrypt['enable'] = false
+nginx['redirect_http_to_https'] = true
+nginx['ssl_certificate'] = "{{ gitlab_tls_cert_path }}"
+nginx['ssl_certificate_key'] = "{{ gitlab_tls_key_path }}"
+
+## 一般
+gitlab_rails['time_zone'] = '{{ gitlab_time_zone }}'
+{% if gitlab_memory_constrained | bool %}
+
+## メモリ制約環境向け（https://docs.gitlab.com/omnibus/settings/memory_constrained_envs/）
+puma['worker_processes'] = 0
+sidekiq['concurrency'] = 10
+prometheus_monitoring['enable'] = false
+gitlab_rails['env'] = {
+  'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000'
+}
+{% endif %}
+{% if gitlab_extra_config | length > 0 %}
+
+## 追加設定（gitlab_extra_config）
+{{ gitlab_extra_config }}
+{% endif %}

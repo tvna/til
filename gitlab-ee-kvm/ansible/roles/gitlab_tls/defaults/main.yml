@@ -1,0 +1,18 @@
+gitlab_tls_mode: selfsigned
+
+gitlab_tls_dir: /etc/gitlab/ssl
+gitlab_tls_cert_path: "{{ gitlab_tls_dir }}/{{ gitlab_fqdn }}.crt"
+gitlab_tls_key_path: "{{ gitlab_tls_dir }}/{{ gitlab_fqdn }}.key"
+
+# --- selfsigned モード ---
+# CA の秘密鍵は VM 内の root 専用ディレクトリに置く（本番用途では社内 CA を使う provided モードを推奨）
+gitlab_tls_ca_dir: /root/gitlab-ca
+gitlab_tls_ca_common_name: "GitLab Lab Private CA"
+gitlab_tls_ca_valid_days: 3650
+# macOS は TLS サーバー証明書の有効期間 825 日以下を要求する。ブラウザ互換性のため 397 日とする
+gitlab_tls_server_valid_days: 397
+# SAN に追加する名前（FQDN は自動で含まれる）。例: ["DNS:gitlab", "IP:192.168.10.50"]
+gitlab_tls_extra_sans: []
+
+# CA 証明書を macOS 側へ回収する先
+gitlab_tls_fetch_ca_to: "{{ playbook_dir }}/../artifacts/gitlab-ca.crt"

@@ -1,0 +1,13 @@
+# OpenTofu / Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/terraform.tfvars
+terraform/crash.log
+
+# Ansible（生成物・秘密情報）
+ansible/inventory/hosts.yml
+ansible/group_vars/gitlab/vault.yml
+
+# macOS へ回収した CA 証明書など
+artifacts/

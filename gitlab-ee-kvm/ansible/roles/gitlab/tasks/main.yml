@@ -1,0 +1,69 @@
+- name: Add GitLab EE repository
+  ansible.builtin.yum_repository:
+    name: gitlab_gitlab-ee
+    description: gitlab_gitlab-ee
+    baseurl: "{{ gitlab_repo_baseurl }}"
+    gpgcheck: true
+    repo_gpgcheck: true
+    gpgkey: "{{ gitlab_repo_gpgkeys }}"
+    sslverify: true
+    sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+    metadata_expire: "300"
+    enabled: true
+
+# EXTERNAL_URL を渡さずにインストールすると、パッケージは reconfigure を実行しない。
+# 初回の reconfigure は下の handler で明示的に実行し、失敗を Ansible 側で検知できるようにする。
+- name: Install GitLab EE
+  ansible.builtin.dnf:
+    name: "gitlab-ee{{ ('-' ~ gitlab_version) if gitlab_version | length > 0 else '' }}"
+    state: present
+
+- name: Deploy gitlab.rb
+  ansible.builtin.template:
+    src: gitlab.rb.j2
+    dest: /etc/gitlab/gitlab.rb
+    owner: root
+    group: root
+    mode: "0600"
+    backup: true
+  notify: Reconfigure GitLab
+
+# 前回の reconfigure が失敗していた場合でも再実行されるようにする
+- name: Check whether GitLab has been bootstrapped
+  ansible.builtin.stat:
+    path: /var/opt/gitlab/bootstrapped
+  register: gitlab_bootstrapped
+
+- name: Schedule initial reconfigure
+  ansible.builtin.debug:
+    msg: GitLab has not been configured yet. Reconfigure will run.
+  changed_when: true
+  notify: Reconfigure GitLab
+  when: not gitlab_bootstrapped.stat.exists
+
+- name: Apply pending reconfigure
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until GitLab is ready
+  ansible.builtin.uri:
+    url: "{{ gitlab_external_url }}/-/readiness"
+    status_code: 200
+    # CA を OS の信頼ストアに登録済みの場合だけ証明書を検証する
+    validate_certs: "{{ gitlab_tls_ca_cert_path is defined }}"
+  register: gitlab_ready
+  until: gitlab_ready.status == 200
+  retries: "{{ gitlab_ready_retries }}"
+  delay: "{{ gitlab_ready_delay }}"
+
+- name: Check generated initial root password
+  ansible.builtin.stat:
+    path: /etc/gitlab/initial_root_password
+  register: gitlab_initial_password_file
+
+- name: Show login information
+  ansible.builtin.debug:
+    msg: >-
+      GitLab is ready at {{ gitlab_external_url }} (user: root).
+      {% if gitlab_root_password | length > 0 %}Password: the value of vault_gitlab_root_password.
+      {% elif gitlab_initial_password_file.stat.exists %}Password: run `sudo cat /etc/gitlab/initial_root_password` on the VM (removed automatically after 24h).
+      {% else %}Initial password file is already gone; reset it with `sudo gitlab-rake "gitlab:password:reset[root]"`.{% endif %}

@@ -1,0 +1,33 @@
+- name: Deploy server certificate (with intermediates)
+  ansible.builtin.copy:
+    src: "{{ gitlab_tls_cert_src }}"
+    dest: "{{ gitlab_tls_cert_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reconfigure GitLab
+
+- name: Deploy server private key
+  ansible.builtin.copy:
+    src: "{{ gitlab_tls_key_src }}"
+    dest: "{{ gitlab_tls_key_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Reconfigure GitLab
+
+- name: Deploy root CA certificate
+  when: gitlab_tls_ca_src is defined
+  block:
+    - name: Copy root CA certificate
+      ansible.builtin.copy:
+        src: "{{ gitlab_tls_ca_src }}"
+        dest: "{{ gitlab_tls_dir }}/provided-ca.crt"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Set CA certificate path
+      ansible.builtin.set_fact:
+        gitlab_tls_ca_cert_path: "{{ gitlab_tls_dir }}/provided-ca.crt"

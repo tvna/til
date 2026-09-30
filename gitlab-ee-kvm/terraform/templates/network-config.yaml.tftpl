@@ -1,0 +1,13 @@
+version: 2
+ethernets:
+  primary:
+    match:
+      macaddress: "${mac_address}"
+    dhcp4: false
+    addresses:
+      - ${ip_address}/${ip_prefix}
+    routes:
+      - to: default
+        via: ${gateway}
+    nameservers:
+      addresses: ${jsonencode(dns_servers)}
