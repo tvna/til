@@ -1,0 +1,19 @@
+---
+# --- base ---
+base_timezone: Asia/Tokyo
+base_dnf_upgrade: true
+base_firewall_ports:
+  - 22/tcp     # SSH
+  - 9090/tcp   # KIE Sandbox (Web UI)
+  - 21345/tcp  # Extended Services (BPMN/DMN の検証・実行)
+  - 7081/tcp   # CORS proxy (Git 連携)
+
+# --- kie_sandbox ---
+kie_sandbox_version: "10.2.0"
+# ブラウザから見た VM のホスト名 / IP。URL に埋め込まれるため、ブラウザで開くアドレスと一致させる
+kie_sandbox_public_host: "{{ ansible_host }}"
+# CORS proxy の転送先として許可する Git ホスト (minimatch。`*.github.com` は `github.com` 自体に一致しない)
+kie_sandbox_cors_allowed_hosts:
+  - github.com
+  - "*.github.com"
+  - "*.githubusercontent.com"

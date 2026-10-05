@@ -1,0 +1,5 @@
+---
+base_timezone: UTC
+base_dnf_upgrade: true
+base_firewall_ports:
+  - 22/tcp

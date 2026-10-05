@@ -1,0 +1,33 @@
+# Managed by Ansible
+# 元: apache/incubator-kie-tools packages/kie-sandbox-distribution/docker-compose.yaml
+name: kie-sandbox
+
+services:
+  kie_sandbox:
+    image: "{{ kie_sandbox_image_prefix }}-sandbox-webapp:{{ kie_sandbox_version }}"
+    restart: unless-stopped
+    ports:
+      - "{{ kie_sandbox_port }}:8080"
+    environment:
+      # ブラウザが直接アクセスする URL なので localhost ではなく VM のアドレスを渡す
+      KIE_SANDBOX_EXTENDED_SERVICES_URL: "{{ kie_sandbox_extended_services_url }}"
+      KIE_SANDBOX_CORS_PROXY_URL: "{{ kie_sandbox_cors_proxy_url }}"
+    depends_on:
+      - extended_services
+      - cors_proxy
+
+  extended_services:
+    image: "{{ kie_sandbox_image_prefix }}-sandbox-extended-services:{{ kie_sandbox_version }}"
+    restart: unless-stopped
+    ports:
+      - "{{ kie_sandbox_extended_services_port }}:21345"
+
+  cors_proxy:
+    image: "{{ kie_sandbox_image_prefix }}-cors-proxy:{{ kie_sandbox_version }}"
+    restart: unless-stopped
+    ports:
+      - "{{ kie_sandbox_cors_proxy_port }}:8080"
+    environment:
+      CORS_PROXY_ALLOWED_ORIGINS: "{{ kie_sandbox_url }}"
+      # イメージは CORS_PROXY_ALLOW_HOSTS を設定しているが、コードが読むのは CORS_PROXY_ALLOWED_HOSTS
+      CORS_PROXY_ALLOWED_HOSTS: "{{ kie_sandbox_cors_allowed_hosts | join(',') }}"

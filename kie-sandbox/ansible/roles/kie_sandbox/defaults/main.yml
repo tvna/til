@@ -1,0 +1,13 @@
+---
+kie_sandbox_version: "10.2.0"
+kie_sandbox_dir: /opt/kie-sandbox
+kie_sandbox_image_prefix: docker.io/apache/incubator-kie
+kie_sandbox_public_host: "{{ ansible_host }}"
+
+kie_sandbox_port: 9090
+kie_sandbox_extended_services_port: 21345
+kie_sandbox_cors_proxy_port: 7081
+
+kie_sandbox_cors_allowed_hosts:
+  - github.com
+  - "*.github.com"

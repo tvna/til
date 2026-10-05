@@ -1,0 +1,4 @@
+# 通常は terraform apply が inventory.ini を自動生成する。
+# 既存 VM に対して Ansible だけ使う場合はこのファイルを inventory.ini にコピーして編集する。
+[kie_sandbox_hosts]
+kie-sandbox ansible_host=192.168.1.51 ansible_user=rocky

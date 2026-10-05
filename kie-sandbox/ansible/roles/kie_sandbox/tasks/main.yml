@@ -1,0 +1,48 @@
+---
+- name: ブラウザ向け URL を組み立てる
+  ansible.builtin.set_fact:
+    kie_sandbox_url: "http://{{ kie_sandbox_public_host }}:{{ kie_sandbox_port }}"
+    kie_sandbox_extended_services_url: "http://{{ kie_sandbox_public_host }}:{{ kie_sandbox_extended_services_port }}"
+    kie_sandbox_cors_proxy_url: "http://{{ kie_sandbox_public_host }}:{{ kie_sandbox_cors_proxy_port }}"
+
+- name: 配置ディレクトリを作成する
+  ansible.builtin.file:
+    path: "{{ kie_sandbox_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Compose ファイルを配置する
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ kie_sandbox_dir }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: KIE Sandbox を起動する
+  community.docker.docker_compose_v2:
+    project_src: "{{ kie_sandbox_dir }}"
+    state: present
+    pull: missing
+    remove_orphans: true
+    wait: true
+    wait_timeout: 300
+
+- name: 各サービスの応答を待つ
+  ansible.builtin.uri:
+    url: "{{ item }}"
+    status_code: 200
+  register: kie_sandbox_health
+  until: kie_sandbox_health.status == 200
+  retries: 30
+  delay: 5
+  loop:
+    - "http://127.0.0.1:{{ kie_sandbox_port }}/"
+    - "http://127.0.0.1:{{ kie_sandbox_extended_services_port }}/ping"
+    - "http://127.0.0.1:{{ kie_sandbox_cors_proxy_port }}/ping"
+
+- name: アクセス先を表示する
+  ansible.builtin.debug:
+    msg: "KIE Sandbox: {{ kie_sandbox_url }}"
