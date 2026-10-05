@@ -1,0 +1,17 @@
+gitlab_external_url: "https://{{ gitlab_fqdn }}"
+gitlab_version: ""
+gitlab_time_zone: "Asia/Tokyo"
+gitlab_root_password: ""
+gitlab_memory_constrained: false
+gitlab_extra_config: ""
+
+# packages.gitlab.com の script.rpm.sh が el/10 向けに生成するリポジトリ定義と同じ内容
+gitlab_repo_baseurl: "https://packages.gitlab.com/gitlab/gitlab-ee/el/{{ ansible_facts['distribution_major_version'] }}/$basearch"
+gitlab_repo_gpgkeys:
+  - https://packages.gitlab.com/gpgkey/gpg.key
+  - https://packages.gitlab.com/gpgkey/gitlab/3D645A26AB9FBD22.pub.gpg
+  - https://packages.gitlab.com/gpgkey/gitlab/CB947AD886C8E8FD.pub.gpg
+
+# 初回インストール（reconfigure 含む）は数分〜十数分かかる
+gitlab_ready_retries: 60
+gitlab_ready_delay: 10

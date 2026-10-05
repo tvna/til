@@ -1,0 +1,17 @@
+common_packages:
+  - curl
+  - chrony
+  - firewalld
+  - python3-firewall
+  # community.crypto で証明書を生成するために必要
+  - python3-cryptography
+
+# true にすると dnf update を実行する（カーネル更新後の再起動は手動）
+common_upgrade_packages: false
+
+common_timezone: "{{ gitlab_time_zone | default('Asia/Tokyo') }}"
+
+common_firewalld_services:
+  - ssh
+  - http
+  - https

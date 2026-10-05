@@ -1,0 +1,32 @@
+# cp terraform.tfvars.example terraform.tfvars して環境に合わせて編集する。
+# terraform.tfvars は .gitignore 済み。
+
+# ~/.ssh/config の Host 名（README の「macOS の準備」参照）
+libvirt_uri  = "qemu+sshcmd://kvm-host/system"
+storage_pool = "default"
+
+vm_name       = "gitlab"
+vm_vcpu       = 8
+vm_memory_mib = 16384
+vm_disk_gib   = 100
+
+# --- ブリッジ接続（推奨）: LAN 上の macOS から VM に直接到達できる ---
+network_mode = "bridge"
+network_name = "br0"
+ip_address   = "192.168.10.50"
+ip_prefix    = 24
+gateway      = "192.168.10.1"
+dns_servers  = ["192.168.10.1"]
+
+# --- NAT 接続（libvirt default ネットワーク）の場合 ---
+# network_mode       = "network"
+# network_name       = "default"
+# ip_address         = "192.168.122.50"   # default ネットワークの DHCP 範囲と重ならないよう注意
+# gateway            = "192.168.122.1"
+# dns_servers        = ["192.168.122.1"]
+# ansible_proxy_jump = "kvm-host"         # KVM ホスト経由で SSH する
+
+fqdn                = "gitlab.lab.example"
+admin_user          = "admin"
+ssh_public_key_path = "~/.ssh/id_ed25519.pub"
+timezone            = "Asia/Tokyo"

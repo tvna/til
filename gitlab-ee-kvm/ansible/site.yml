@@ -1,0 +1,31 @@
+- name: Install GitLab EE on Rocky Linux 10
+  hosts: gitlab
+  become: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Wait for SSH to become available
+      ansible.builtin.wait_for_connection:
+        timeout: 600
+
+    # rc=2 は「完了したが回復可能なエラー/非推奨警告あり」なので続行する
+    - name: Wait for cloud-init to finish
+      ansible.builtin.command: cloud-init status --wait
+      register: cloud_init_status
+      changed_when: false
+      failed_when: cloud_init_status.rc not in [0, 2]
+
+    - name: Gather facts
+      ansible.builtin.setup:
+
+    - name: Assert supported OS
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['distribution'] == 'Rocky'
+          - ansible_facts['distribution_major_version'] == '10'
+        fail_msg: "This playbook targets Rocky Linux 10 (got {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }})"
+
+  roles:
+    - common
+    - gitlab_tls
+    - gitlab

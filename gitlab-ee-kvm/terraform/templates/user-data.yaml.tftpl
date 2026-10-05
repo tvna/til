@@ -1,0 +1,26 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${fqdn}
+prefer_fqdn_over_hostname: true
+# /etc/hosts に FQDN -> 127.0.0.1 を登録する（VM 内から自身の external_url に到達するため）
+manage_etc_hosts: true
+timezone: ${timezone}
+
+users:
+  - name: ${admin_user}
+    groups: [wheel]
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${jsonencode(ssh_public_key)}
+
+ssh_pwauth: false
+disable_root: true
+
+growpart:
+  mode: auto
+  devices: ["/"]
+resize_rootfs: true
+
+final_message: "cloud-init finished after $UPTIME seconds"

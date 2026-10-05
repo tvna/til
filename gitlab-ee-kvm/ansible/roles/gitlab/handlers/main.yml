@@ -1,0 +1,5 @@
+# GITLAB_ROOT_PASSWORD は初回（DB 初期化時）の reconfigure でのみ使われる
+- name: Reconfigure GitLab
+  ansible.builtin.command: gitlab-ctl reconfigure
+  environment: "{{ {'GITLAB_ROOT_PASSWORD': gitlab_root_password} if gitlab_root_password | length > 0 else {} }}"
+  changed_when: true
