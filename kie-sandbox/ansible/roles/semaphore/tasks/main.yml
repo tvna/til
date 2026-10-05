@@ -1,0 +1,73 @@
+---
+- name: 管理者パスワードが設定されていることを確認する
+  ansible.builtin.assert:
+    that:
+      - semaphore_admin_password | length >= 12
+      - "\"'\" not in semaphore_admin_password"
+      - "\"'\" not in semaphore_ldap_password"
+    fail_msg: "環境変数 SEMAPHORE_ADMIN_PASSWORD に 12 文字以上のパスワードを設定してください (単一引用符は使用不可)"
+  no_log: true
+
+- name: 配置ディレクトリを作成する
+  ansible.builtin.file:
+    path: "{{ semaphore_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+# DB パスワードと鍵暗号化キーは VM 上で初回のみ生成し、再実行時は既存値を使う
+- name: DB パスワードと鍵暗号化キーを初回のみ生成する
+  ansible.builtin.shell: |
+    set -eu
+    umask 077
+    db_pass="$(openssl rand -hex 24)"
+    key="$(openssl rand -base64 32)"
+    printf "POSTGRES_PASSWORD='%s'\nSEMAPHORE_DB_PASS='%s'\nSEMAPHORE_ACCESS_KEY_ENCRYPTION='%s'\n" \
+      "$db_pass" "$db_pass" "$key" > generated.env
+  args:
+    chdir: "{{ semaphore_dir }}"
+    creates: "{{ semaphore_dir }}/generated.env"
+  no_log: true
+
+# 単一引用符で囲むと Compose は値の中の $ を展開しない
+- name: 管理者・LDAP の秘密情報ファイルを配置する (server コンテナのみが読む)
+  ansible.builtin.copy:
+    dest: "{{ semaphore_dir }}/admin.env"
+    owner: root
+    group: root
+    mode: "0600"
+    content: |
+      SEMAPHORE_ADMIN_PASSWORD='{{ semaphore_admin_password }}'
+      SEMAPHORE_LDAP_PASSWORD='{{ semaphore_ldap_password }}'
+  no_log: true
+
+- name: Compose ファイルを配置する
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ semaphore_dir }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Semaphore UI を起動する
+  community.docker.docker_compose_v2:
+    project_src: "{{ semaphore_dir }}"
+    state: present
+    pull: missing
+    remove_orphans: true
+    wait: true
+    wait_timeout: 300
+
+- name: Semaphore UI の応答を待つ
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ semaphore_port }}/api/ping"
+    status_code: 200
+  register: semaphore_health
+  until: semaphore_health.status == 200
+  retries: 30
+  delay: 5
+
+- name: アクセス先を表示する
+  ansible.builtin.debug:
+    msg: "Semaphore UI: http://{{ semaphore_public_host }}:{{ semaphore_port }} (ユーザー: {{ semaphore_admin_username }})"

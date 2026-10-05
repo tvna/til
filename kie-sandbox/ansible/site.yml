@@ -1,0 +1,19 @@
+---
+- name: KIE Sandbox と Semaphore UI を Rocky Linux に構築する
+  hosts: kie_sandbox_hosts
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: 対応 OS であることを確認する
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['distribution'] == 'Rocky'
+          - ansible_facts['distribution_major_version'] in ['9', '10']
+        fail_msg: "Rocky Linux 9/10 以外は未検証です: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+
+  roles:
+    - base
+    - docker
+    - kie_sandbox
+    - semaphore

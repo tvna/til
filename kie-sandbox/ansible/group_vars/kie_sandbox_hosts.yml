@@ -1,0 +1,39 @@
+---
+# --- base ---
+base_timezone: Asia/Tokyo
+base_dnf_upgrade: true
+base_firewall_ports:
+  - 22/tcp     # SSH
+  - 9090/tcp   # KIE Sandbox (Web UI)
+  - 21345/tcp  # Extended Services (BPMN/DMN の検証・実行)
+  - 7081/tcp   # CORS proxy (Git 連携)
+  - 3000/tcp   # Semaphore UI
+
+# --- kie_sandbox ---
+kie_sandbox_version: "10.2.0"
+# ブラウザから見た VM のホスト名 / IP。URL に埋め込まれるため、ブラウザで開くアドレスと一致させる
+kie_sandbox_public_host: "{{ ansible_host }}"
+# CORS proxy の転送先として許可する Git ホスト (minimatch。`*.github.com` は `github.com` 自体に一致しない)
+kie_sandbox_cors_allowed_hosts:
+  - github.com
+  - "*.github.com"
+  - "*.githubusercontent.com"
+
+# --- semaphore ---
+semaphore_version: "v2.19.14"
+semaphore_public_host: "{{ ansible_host }}"
+semaphore_admin_username: "{{ lookup('ansible.builtin.env', 'SEMAPHORE_ADMIN_USERNAME') | default('admin', true) }}"
+semaphore_admin_email: "{{ lookup('ansible.builtin.env', 'SEMAPHORE_ADMIN_EMAIL') | default('admin@localhost', true) }}"
+# 初回起動時のみ使われる (後から変えても反映されない)
+semaphore_admin_password: "{{ lookup('ansible.builtin.env', 'SEMAPHORE_ADMIN_PASSWORD') }}"
+
+# Active Directory / LDAP 連携。使う場合は true にして各値を設定する
+semaphore_ldap_enabled: false
+# semaphore_ldap_host: ad.example.local
+# semaphore_ldap_port: 389
+# semaphore_ldap_needtls: true
+# semaphore_ldap_bind_dn: "CN=svc-semaphore,OU=Service,DC=example,DC=local"
+# semaphore_ldap_password: "{{ lookup('ansible.builtin.env', 'SEMAPHORE_LDAP_PASSWORD') }}"
+# semaphore_ldap_search_dn: "OU=Users,DC=example,DC=local"
+# semaphore_ldap_search_filter: "(&(objectClass=user)(sAMAccountName=%s))"
+# semaphore_ldap_mapping_username: sAMAccountName

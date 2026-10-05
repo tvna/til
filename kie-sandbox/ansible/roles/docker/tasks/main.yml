@@ -1,0 +1,28 @@
+---
+# Docker 公式手順 (RHEL) に従い競合パッケージを除去してから docker-ce を導入する
+- name: 競合パッケージを削除する
+  ansible.builtin.dnf:
+    name:
+      - podman
+      - podman-docker
+      - runc
+    state: absent
+
+- name: Docker CE リポジトリを追加する
+  ansible.builtin.get_url:
+    url: "{{ docker_repo_url }}"
+    dest: /etc/yum.repos.d/docker-ce.repo
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Docker Engine を導入する
+  ansible.builtin.dnf:
+    name: "{{ docker_packages }}"
+    state: present
+
+- name: Docker を起動・有効化する
+  ansible.builtin.systemd_service:
+    name: docker
+    state: started
+    enabled: true
