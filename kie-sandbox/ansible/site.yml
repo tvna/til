@@ -1,5 +1,5 @@
 ---
-- name: KIE Sandbox を Rocky Linux に構築する
+- name: KIE Sandbox と Semaphore UI を Rocky Linux に構築する
   hosts: kie_sandbox_hosts
   become: true
   gather_facts: true
@@ -16,3 +16,4 @@
     - base
     - docker
     - kie_sandbox
+    - semaphore

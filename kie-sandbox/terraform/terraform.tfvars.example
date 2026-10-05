@@ -5,7 +5,7 @@ libvirt_uri = "qemu+sshcmd://kvm-host/system"
 
 vm_name    = "kie-sandbox"
 vcpu       = 2
-memory_mib = 4096
+memory_mib = 6144
 disk_gib   = 30
 
 # Rocky 10 を使う場合

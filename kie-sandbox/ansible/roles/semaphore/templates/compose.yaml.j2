@@ -1,0 +1,60 @@
+# Managed by Ansible
+# 元: semaphoreui/semaphore deployment/compose/server/base.yml + store/postgres.yml
+name: semaphore
+
+services:
+  server:
+    image: "docker.io/semaphoreui/semaphore:{{ semaphore_version }}"
+    restart: unless-stopped
+    ports:
+      - "{{ semaphore_port }}:3000"
+    env_file:
+      - generated.env
+      - admin.env
+    environment:
+      SEMAPHORE_DB_DIALECT: postgres
+      SEMAPHORE_DB_HOST: db
+      SEMAPHORE_DB_PORT: "5432"
+      SEMAPHORE_DB_USER: semaphore
+      SEMAPHORE_DB: semaphore
+      SEMAPHORE_WEB_ROOT: "http://{{ semaphore_public_host }}:{{ semaphore_port }}"
+      SEMAPHORE_ADMIN: "{{ semaphore_admin_username }}"
+      SEMAPHORE_ADMIN_NAME: "{{ semaphore_admin_name }}"
+      SEMAPHORE_ADMIN_EMAIL: "{{ semaphore_admin_email }}"
+      SEMAPHORE_LDAP_ACTIVATED: "{{ 'yes' if semaphore_ldap_enabled | bool else 'no' }}"
+{% if semaphore_ldap_enabled | bool %}
+      SEMAPHORE_LDAP_HOST: "{{ semaphore_ldap_host }}"
+      SEMAPHORE_LDAP_PORT: "{{ semaphore_ldap_port }}"
+      SEMAPHORE_LDAP_NEEDTLS: "{{ 'yes' if semaphore_ldap_needtls | bool else 'no' }}"
+      SEMAPHORE_LDAP_DN_BIND: "{{ semaphore_ldap_bind_dn }}"
+      SEMAPHORE_LDAP_DN_SEARCH: "{{ semaphore_ldap_search_dn }}"
+      SEMAPHORE_LDAP_SEARCH_FILTER: "{{ semaphore_ldap_search_filter }}"
+      SEMAPHORE_LDAP_MAPPING_USERNAME: "{{ semaphore_ldap_mapping_username }}"
+      SEMAPHORE_LDAP_MAPPING_FULLNAME: "{{ semaphore_ldap_mapping_fullname }}"
+      SEMAPHORE_LDAP_MAPPING_EMAIL: "{{ semaphore_ldap_mapping_email }}"
+{% endif %}
+    volumes:
+      - server:/var/lib/semaphore
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: "{{ semaphore_postgres_image }}"
+    restart: unless-stopped
+    env_file:
+      - generated.env
+    environment:
+      POSTGRES_USER: semaphore
+      POSTGRES_DB: semaphore
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U semaphore -d semaphore"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  server:
+  postgres:

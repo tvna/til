@@ -23,9 +23,9 @@ variable "vcpu" {
 }
 
 variable "memory_mib" {
-  description = "メモリ MiB (Extended Services が JVM のため 4 GiB を既定にしている)"
+  description = "メモリ MiB (KIE Extended Services の JVM と Semaphore + PostgreSQL を同居させるため 6 GiB)"
   type        = number
-  default     = 4096
+  default     = 6144
 }
 
 variable "disk_gib" {
