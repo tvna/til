@@ -41,9 +41,9 @@ grep -E "UpdaterMain \(--install\) returned|Failed to write file|Couldn't set fi
 ### 3.2 所有者と書き込みを確かめる
 
 ```bash
-ls -ld ~/Library/LaunchAgents                                              # 所有者が自分でなければ異常
-touch ~/Library/LaunchAgents/.wtest && rm ~/Library/LaunchAgents/.wtest    # Permission denied なら書けない
-find ~/Library -maxdepth 1 -user root                                      # ~/Library 直下の root 所有物
+ls -ld ~/Library/LaunchAgents                                               # 所有者が自分でなければ異常
+probe=$(mktemp "$HOME/Library/LaunchAgents/.wtest.XXXXXX") && rm "$probe"   # Permission denied なら書けない
+find ~/Library -maxdepth 1 -user root                                       # ~/Library 直下の root 所有物
 ```
 
 今回は、`~/Library` 直下で root 所有だったのは `LaunchAgents` だけだった。
