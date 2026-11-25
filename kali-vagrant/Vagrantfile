@@ -1,0 +1,48 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Kali Linux (kalilinux/rolling) on VirtualBox
+# 設定値は環境変数で上書きできる（README.md の「4. 設定値」を参照）。
+
+Vagrant.require_version ">= 2.4.9" # VirtualBox 7.2 対応は 2.4.9 から
+
+KALI_BOX_VERSION = ENV.fetch("KALI_BOX_VERSION", "2026.2.0")
+KALI_VM_NAME     = ENV.fetch("KALI_VM_NAME", "kali-vagrant")
+KALI_CPUS        = Integer(ENV.fetch("KALI_CPUS", "2"))
+KALI_MEMORY      = Integer(ENV.fetch("KALI_MEMORY", "4096")) # MB
+KALI_GUI         = ENV.fetch("KALI_GUI", "true") == "true"
+KALI_PRIVATE_IP  = ENV.fetch("KALI_PRIVATE_IP", "")          # 例: 192.168.56.10（空なら NAT のみ）
+KALI_UPGRADE     = ENV.fetch("KALI_UPGRADE", "false")
+KALI_PACKAGES    = ENV.fetch("KALI_PACKAGES", "")            # 例: "kali-linux-default seclists"
+KALI_TIMEZONE    = ENV.fetch("KALI_TIMEZONE", "Asia/Tokyo")
+KALI_KEYMAP      = ENV.fetch("KALI_KEYMAP", "jp")
+
+Vagrant.configure("2") do |config|
+  config.vm.box         = "kalilinux/rolling"
+  config.vm.box_version = KALI_BOX_VERSION
+  config.vm.hostname    = KALI_VM_NAME
+
+  # ゲストを信頼しない前提で、共有フォルダ上のシンボリックリンク作成を無効化する
+  config.vm.synced_folder ".", "/vagrant", SharedFoldersEnableSymlinksCreate: false
+
+  config.vm.network "private_network", ip: KALI_PRIVATE_IP unless KALI_PRIVATE_IP.empty?
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name   = KALI_VM_NAME
+    vb.gui    = KALI_GUI
+    vb.cpus   = KALI_CPUS
+    vb.memory = KALI_MEMORY
+    vb.customize ["modifyvm", :id, "--vram", "128"]
+    vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+    vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+  end
+
+  config.vm.provision "shell",
+    path: "provision/bootstrap.sh",
+    env: {
+      "KALI_UPGRADE"  => KALI_UPGRADE,
+      "KALI_PACKAGES" => KALI_PACKAGES,
+      "KALI_TIMEZONE" => KALI_TIMEZONE,
+      "KALI_KEYMAP"   => KALI_KEYMAP,
+    }
+end
